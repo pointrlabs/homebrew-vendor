@@ -7,8 +7,8 @@ class MaplibreMapRenderer < Formula
 
   bottle do
     root_url "https://github.com/pointrlabs/maplibre-gl-native/releases/download/version%2Fmap-renderer%2F1.3"
-    sha256 cellar: :any_skip_relocation, arm64_sequoia: "f258b62dedaac02f3fc5fc684ea6e228858ae5477f77ed16decfad3714749232"
-    sha256 cellar: :any_skip_relocation, sequoia: "06dfe7da2bf32e2ee235fff57faec83faecc10b1e1dac8388ab854d96a3443c3"
+    sha256 cellar: :any_skip_relocation, arm64_sequoia: "0b0fb62404f5ac8ae32d1a6710c62813440d35e2ac17e1713078a4d9f69f9bd8"
+    sha256 cellar: :any_skip_relocation, sequoia:       "a0d5a40dedea500ce8a3bf764f9f54a76006299419b44c90803c01ca8984efa9"
   end
 
   depends_on "cmake" => :build
