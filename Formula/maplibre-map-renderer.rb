@@ -1,14 +1,13 @@
 class MaplibreMapRenderer < Formula
   desc "Renders and produces raster images from Maplibre maps"
   homepage "https://github.com/pointrlabs/maplibre-gl-native/tree/develop/map-renderer"
-  url "https://github.com/pointrlabs/maplibre-gl-native.git", tag: "version/map-renderer/1.1", revision: "630e51e941621b1c7aec9b9cd84c623482a20f2c"
+  url "https://github.com/pointrlabs/maplibre-gl-native.git", tag: "version/map-renderer/1.3", revision: "3cd62bb7532286b39caab48f3d4781e10322e1cb"
   license "MIT"
   head "https://github.com/pointrlabs/maplibre-gl-native.git", branch: "develop"
 
   bottle do
-    root_url "https://github.com/pointrlabs/maplibre-gl-native/releases/download/version%2Fmap-renderer%2F1.1"
+    root_url "https://github.com/pointrlabs/maplibre-gl-native/releases/download/version%2Fmap-renderer%2F1.3"
     sha256 cellar: :any_skip_relocation, arm64_sequoia: "f258b62dedaac02f3fc5fc684ea6e228858ae5477f77ed16decfad3714749232"
-    sha256 cellar: :any_skip_relocation, arm64_sonoma: "7d173bff46a8cfd08fde7e0d24e3b3dbd94ccec369b78a6cecb33af3d25296ed"
     sha256 cellar: :any_skip_relocation, sequoia: "06dfe7da2bf32e2ee235fff57faec83faecc10b1e1dac8388ab854d96a3443c3"
   end
 
