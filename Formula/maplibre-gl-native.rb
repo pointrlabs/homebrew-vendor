@@ -1,7 +1,7 @@
 class MaplibreGlNative < Formula
   desc "Pointr-flavored Maplibre GL Native"
   homepage "https://maplibre.org"
-  url "https://github.com/pointrlabs/maplibre-gl-native.git", tag: "v1.0-rc.1", revision: "a2c20ecb77bc0f1faf98b8373d354cbf872c029d"
+  url "https://github.com/pointrlabs/maplibre-gl-native.git", tag: "version/maplibre-gl-native/1.0", revision: "f7abe3d6246a9524685eb7c2f7338304f102bef0"
   license "BSD-2-Clause"
   head "https://github.com/pointrlabs/maplibre-gl-native.git", branch: "develop"
 
