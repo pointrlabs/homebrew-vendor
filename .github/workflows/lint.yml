@@ -1,7 +1,6 @@
 name: lint
 on:
-  pull_request:
-    branches: [ develop ]
+  workflow_dispatch:
 env:
   HOMEBREW_GITHUB_API_TOKEN: ${{ github.token }}
 jobs:
