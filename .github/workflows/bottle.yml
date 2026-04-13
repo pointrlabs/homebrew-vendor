@@ -1,0 +1,88 @@
+name: bottle
+on:
+  workflow_dispatch:
+    inputs:
+      formula:
+        description: 'Formula to bottle (e.g. maplibre-gl-native)'
+        required: true
+        type: string
+      rebuild:
+        description: 'Increment rebuild number (for re-bottling same version)'
+        default: false
+        type: boolean
+env:
+  HOMEBREW_GITHUB_API_TOKEN: ${{ secrets.POINTR_GITHUB_TOKEN }}
+permissions:
+  packages: write
+  contents: write
+jobs:
+  bottle:
+    strategy:
+      matrix:
+        runner:
+          - macos-15
+          - macos-15-intel
+          - macos-26
+          - macos-26-intel
+          - ubuntu-22.04
+    runs-on: ${{ matrix.runner }}
+    steps:
+      - name: Set up Homebrew
+        uses: Homebrew/actions/setup-homebrew@main
+        with:
+          token: ${{ env.HOMEBREW_GITHUB_API_TOKEN }}
+
+      - name: Remove conflicting Python symlinks
+        if: matrix.runner == 'macos-15-intel' || matrix.runner == 'macos-26-intel'
+        run: |
+          rm -f /usr/local/bin/2to3-3.11 /usr/local/bin/idle3.11 /usr/local/bin/pydoc3.11 /usr/local/bin/python3.11 /usr/local/bin/python3.11-config
+
+      - name: Install formula
+        run: brew install --build-bottle "$GITHUB_REPOSITORY/${{ inputs.formula }}"
+
+      - name: Create bottle
+        run: |
+          brew bottle --json \
+            ${{ !inputs.rebuild && '--no-rebuild' || '' }} \
+            --root-url="https://ghcr.io/v2/pointrlabs/vendor" \
+            "$GITHUB_REPOSITORY/${{ inputs.formula }}"
+
+      - name: Upload bottle artifact
+        uses: actions/upload-artifact@v7
+        with:
+          name: bottle-${{ matrix.runner }}
+          path: |
+            *.bottle.json
+            *.bottle*.tar.gz
+
+  upload-and-update:
+    needs: bottle
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Set up Homebrew
+        uses: Homebrew/actions/setup-homebrew@main
+        with:
+          token: ${{ env.HOMEBREW_GITHUB_API_TOKEN }}
+
+      - name: Download all bottle artifacts
+        uses: actions/download-artifact@v7
+        with:
+          pattern: bottle-*
+          merge-multiple: true
+
+      - name: Upload bottles to GHCR
+        env:
+          HOMEBREW_GITHUB_PACKAGES_TOKEN: ${{ github.token }}
+          HOMEBREW_GITHUB_PACKAGES_USER: ${{ github.actor }}
+        run: brew pr-upload --upload-only --root-url="https://ghcr.io/v2/pointrlabs/vendor"
+
+      - name: Update formula with bottle block
+        run: brew bottle --merge --write --no-commit *.bottle.json
+
+      - name: Commit and push bottle block
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add Formula/${{ inputs.formula }}.rb
+          git commit -m "[${{ inputs.formula }}] Add bottles"
+          git push origin HEAD
