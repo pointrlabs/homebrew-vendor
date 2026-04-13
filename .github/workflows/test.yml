@@ -1,16 +1,14 @@
 name: test
 on:
-  push:
-    branches:
-      - develop
   pull_request:
+    branches: [ develop ]:
 env:
   HOMEBREW_GITHUB_API_TOKEN: ${{ github.token }}
 jobs:
   test-formulae:
     strategy:
       matrix:
-        os: [ubuntu-22.04, macos-13]
+        os: [ubuntu-22.04, macos-15]
     runs-on: ${{ matrix.os }}
     steps:
       - name: Set up Homebrew
