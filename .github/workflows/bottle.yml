@@ -11,7 +11,7 @@ on:
         default: false
         type: boolean
 env:
-  HOMEBREW_GITHUB_API_TOKEN: ${{ secrets.POINTR_GITHUB_TOKEN }}
+  HOMEBREW_GITHUB_API_TOKEN: ${{ github.token }}
 permissions:
   packages: write
   contents: write
