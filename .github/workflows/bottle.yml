@@ -77,7 +77,7 @@ jobs:
         run: brew pr-upload --upload-only --root-url="https://ghcr.io/v2/pointrlabs/vendor"
 
       - name: Update formula with bottle block
-        run: brew bottle --merge --write --no-commit *.bottle.json
+        run: brew bottle --merge --write --no-commit ./*.bottle.json
 
       - name: Commit and push bottle block
         run: |

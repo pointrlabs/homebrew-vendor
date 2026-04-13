@@ -21,15 +21,15 @@ brew install maplibre-map-renderer
 To upgrade a formula:
 ```
 brew update
-brew upgrade pointrlabs/vendor/formula-name
+brew upgrade pointrlabs/vendor/maplibre-gl-native
 ```
 
 
 # How to build and upload bottles
 
 ```
-brew install --build-bottle --verbose pointrlabs/vendor/formula-name
-brew bottle pointrlabs/vendor/formula-name
+brew install --build-bottle --verbose pointrlabs/vendor/maplibre-gl-native
+brew bottle pointrlabs/vendor/maplibre-gl-native
 ```
 
 This will output the bottle stub that should be inserted into the formula. It will also produce the tar.gz archive, which you should upload into Releases section of the target repo. A couple more things to be careful about:
