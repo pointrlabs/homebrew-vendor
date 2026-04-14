@@ -1,7 +1,7 @@
 # homebrew-vendor
 Homebrew tap for Pointr-customized third-party packages.
 
-# How to use
+## How to use
 To install the formulae inside this tap you need to add it via:
 ```
 brew tap pointrlabs/vendor
@@ -24,9 +24,10 @@ brew update
 brew upgrade pointrlabs/vendor/maplibre-gl-native
 ```
 
+## How to build and upload bottles
+There is a `bottle` workflow which you can trigger under "Actions". You need to type in the name of the formula to bottle. The workflow will create the bottles, upload to Packages and then automatically push the bottle definition to the formula in the specified branch.
 
-# How to build and upload bottles
-
+### How to build bottles manually
 ```
 brew install --build-bottle --verbose pointrlabs/vendor/maplibre-gl-native
 brew bottle pointrlabs/vendor/maplibre-gl-native
