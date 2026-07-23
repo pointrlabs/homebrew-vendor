@@ -6,6 +6,15 @@ class Qmaplibre < Formula
   license "BSD-2-Clause"
   head "https://github.com/pointrlabs/ptr-rd-maplibre-native-qt.git", branch: "develop"
 
+  bottle do
+    root_url "https://ghcr.io/v2/pointrlabs/vendor"
+    sha256 cellar: :any, arm64_tahoe:   "ca8ae6bf7122ad62c1fdbdad5e0b8c90ce05cc528ceab781bf19b671bc7038da"
+    sha256 cellar: :any, arm64_sequoia: "ef9893d4efe38617d440fadc3a0f6d9226a131369ec1cdfe60d779f2a8967438"
+    sha256 cellar: :any, tahoe:         "99262c35fdee36a8164290ce6c44f786a8e74696c44f2f8ccdafe8e88f970d55"
+    sha256 cellar: :any, sequoia:       "c0f0e86bac6817ad0bc83830cf4772ec21b157269883a0c6fb846b9ff896be9e"
+    sha256 cellar: :any, x86_64_linux:  "178fdcf0ae267fef05030ab1dd3a1cecd809c31b38e7349dd1b7cd7deadd707c"
+  end
+
   depends_on "cmake" => :build
   depends_on "ninja" => :build
   depends_on "qt"
