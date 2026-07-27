@@ -3,7 +3,7 @@ class PtrBrew < Formula
   homepage "https://github.com/pointrlabs/homebrew-vendor"
   url "https://github.com/pointrlabs/homebrew-vendor.git", tag: "version/ptr-brew/1.0.0", revision: "15819ed1d6cc4337a4fc4c2e34ee5da5f5adbe68"
   version "1.0.0"
-  license :cannot_represent
+  license "MIT"
   head "https://github.com/pointrlabs/homebrew-vendor.git", branch: "develop"
 
   depends_on "jq"
