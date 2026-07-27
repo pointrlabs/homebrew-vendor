@@ -1,8 +1,7 @@
 class PtrBrew < Formula
   desc "Authentication helpers for the Pointr private Homebrew taps"
   homepage "https://github.com/pointrlabs/homebrew-vendor"
-  # NOTE: tag and revision are placeholders until version/ptr-brew/1.0.0 is tagged.
-  url "https://github.com/pointrlabs/homebrew-vendor.git", tag: "version/ptr-brew/1.0.0", revision: "0000000000000000000000000000000000000000"
+  url "https://github.com/pointrlabs/homebrew-vendor.git", tag: "version/ptr-brew/1.0.0", revision: "15819ed1d6cc4337a4fc4c2e34ee5da5f5adbe68"
   version "1.0.0"
   license :cannot_represent
   head "https://github.com/pointrlabs/homebrew-vendor.git", branch: "develop"
