@@ -7,8 +7,16 @@
 # Usage: ptr-brew install simulator10
 set -uo pipefail
 
+# Replaced with the formula's version at install time (see Formula/ptr-brew.rb).
+# Stays "dev" when run straight from a git checkout.
+PTR_BREW_VERSION="dev"
 CREDS_FILE="$HOME/.pointr-brew"
 LEGACY_MARKER="# Pointr Homebrew helpers"
+
+# Printed first so shared logs always identify which helper version produced
+# them, before anything can fail. To stderr, so it cannot corrupt output that
+# callers parse, e.g. `$(ptr-brew --prefix)`.
+echo "ptr-brew $PTR_BREW_VERSION" >&2
 
 if [ ! -f "$CREDS_FILE" ]; then
   echo "Run 'ptr-setup' first to configure credentials." >&2
@@ -79,9 +87,14 @@ if [ -z "$registry_token" ]; then
 fi
 export HOMEBREW_DOCKER_REGISTRY_TOKEN="$registry_token"
 
+# Never prompt. Set as an env var rather than injecting -y into the argument
+# list: it covers install/upgrade/reinstall uniformly and cannot collide with
+# the user's own flags or a subcommand that does not accept -y.
+export HOMEBREW_NO_ASK=1
+
 # Refresh formula definitions before any operation that installs.
 case "${1:-}" in
-  install|upgrade|reinstall) brew update ;;
+  install|upgrade|reinstall) brew update </dev/null ;;
 esac
 
 exec brew "$@"
