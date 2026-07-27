@@ -56,7 +56,10 @@ fi
 # from a bootstrap before the formula lands. Install it if missing.
 if ! command -v jq &>/dev/null; then
   echo "Installing jq..."
-  brew install jq || { echo "Failed to install jq." >&2; exit 1; }
+  # </dev/null: when invoked from a `curl | bash` bootstrap, stdin is the pipe
+  # the script itself is being read from; a child that consumes it truncates the
+  # remaining script. Applies to every brew call below too.
+  brew install jq </dev/null || { echo "Failed to install jq." >&2; exit 1; }
 fi
 
 # Prompt for anything not supplied on the command line.
@@ -151,13 +154,13 @@ echo "✓ Credentials saved to $CREDS_FILE"
 # that ptr-brew exports instead.
 tap_repo() {
   local tap="$1" url="$2"
-  if brew tap | grep -qx "$tap"; then
+  if brew tap </dev/null | grep -qx "$tap"; then
     # Rewrite any previously embedded credential out of the remote.
     git -C "$(brew --repo "$tap")" remote set-url origin "$url" 2>/dev/null || true
     echo "✓ $tap already tapped"
   else
     echo "Tapping $tap..."
-    brew tap "$tap" "$url" || { echo "Failed to tap $tap." >&2; exit 1; }
+    brew tap "$tap" "$url" </dev/null || { echo "Failed to tap $tap." >&2; exit 1; }
   fi
 }
 

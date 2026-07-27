@@ -49,21 +49,26 @@ for rc in "$HOME/.zshrc" "$HOME/.bashrc" "$HOME/.bash_profile" "$HOME/.profile";
 done
 
 # --- Install or upgrade -----------------------------------------------------
+# Every brew call redirects stdin from /dev/null. This script is normally run as
+# `curl ... | bash`, where stdin is the pipe bash is still reading the script
+# from: any child that consumes stdin eats the remainder of the script, which
+# then never executes. Do not remove these redirects.
+#
 # Public tap, so no credentials in the remote.
-brew tap "$TAP" "$TAP_URL" 2>/dev/null || true
+brew tap "$TAP" "$TAP_URL" </dev/null 2>/dev/null || true
 
-if brew list "$FORMULA" &>/dev/null; then
-  brew update
-  if [ -n "$(brew outdated "$FORMULA")" ]; then
+if brew list "$FORMULA" </dev/null &>/dev/null; then
+  brew update </dev/null
+  if [ -n "$(brew outdated "$FORMULA" </dev/null)" ]; then
     echo "Upgrading ptr-brew..."
-    brew upgrade "$FORMULA"
+    brew upgrade "$FORMULA" </dev/null
   else
     echo "ptr-brew is already up to date."
   fi
 else
   echo "Installing ptr-brew..."
   # Fully-qualified name: Homebrew auto-trusts it, so no trust prompt.
-  brew install "$FORMULA"
+  brew install "$FORMULA" </dev/null
 fi
 
 # --- Hand off to ptr-setup --------------------------------------------------
