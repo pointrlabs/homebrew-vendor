@@ -1,0 +1,187 @@
+#!/bin/bash
+# Interactive (or non-interactive) setup for the Pointr private Homebrew taps.
+#
+# Writes credentials to ~/.pointr-brew, taps pointrlabs/vendor and
+# pointrlabs/internal, and trusts both taps so short-name installs work.
+#
+# Usage:
+#   ptr-setup                                # prompt for credentials
+#   ptr-setup --user <login> --token <token> # non-interactive
+set -uo pipefail
+
+CREDS_FILE="$HOME/.pointr-brew"
+SETUP_VERSION="1.0.0"
+
+# Canary package used to prove the token can pull bottles from GHCR. If this
+# formula is ever renamed, update it here or the check reports a false failure.
+GHCR_CANARY="simulator10"
+
+usage() {
+  cat <<'USAGE'
+Usage: ptr-setup [--user <login>] [--token <token>]
+
+Configures access to the Pointr private Homebrew taps.
+
+Options:
+  --user <login>   GitHub username the token belongs to
+  --token <token>  GitHub personal access token
+  -h, --help       Show this message
+
+With no options, prompts for credentials interactively.
+USAGE
+}
+
+username=""
+token=""
+
+while [ $# -gt 0 ]; do
+  case "$1" in
+    --user)  username="${2:-}"; shift 2 ;;
+    --token) token="${2:-}";    shift 2 ;;
+    --user=*)  username="${1#*=}"; shift ;;
+    --token=*) token="${1#*=}";    shift ;;
+    -h|--help) usage; exit 0 ;;
+    *) echo "Unknown option: $1" >&2; usage >&2; exit 2 ;;
+  esac
+done
+
+echo "=== Pointr Homebrew Setup ==="
+
+if ! command -v brew &>/dev/null; then
+  echo "Homebrew is not installed. Install it first: https://brew.sh" >&2
+  exit 1
+fi
+
+# jq is a declared dependency of the ptr-brew formula, but ptr-setup may be run
+# from a bootstrap before the formula lands. Install it if missing.
+if ! command -v jq &>/dev/null; then
+  echo "Installing jq..."
+  brew install jq || { echo "Failed to install jq." >&2; exit 1; }
+fi
+
+# Prompt for anything not supplied on the command line.
+if [ -z "$username" ] || [ -z "$token" ]; then
+  echo "Enter your GitHub credentials (ask your admin if you don't have a token)."
+  [ -z "$username" ] && { printf "GitHub username: "; read -r username; }
+  [ -z "$token" ] && { printf "GitHub token: "; read -r token; }
+fi
+
+if [ -z "$username" ] || [ -z "$token" ]; then
+  echo "Username and token are required." >&2
+  exit 1
+fi
+
+# --- Verification -----------------------------------------------------------
+# Three checks, all fatal. A half-configured credentials file is worse than
+# none: ptr-brew would treat it as set up and fail later in a confusing way.
+failed=0
+
+login=$(curl -fsS -H "Authorization: token $token" \
+  https://api.github.com/user 2>/dev/null | jq -r '.login // empty')
+if [ -z "$login" ]; then
+  echo "✗ Token is invalid or expired." >&2
+  echo "  Check the token and try again." >&2
+  exit 1
+fi
+echo "✓ Authenticated as $login"
+if [ "$login" != "$username" ]; then
+  echo "  note: token belongs to '$login', not '$username'"
+fi
+
+# Tap read access. A private repo returns 404 (not 403) for an unauthorized
+# token — GitHub hides existence — so report "cannot read", not "denied".
+for repo in pointrlabs/homebrew-vendor pointrlabs/homebrew-internal; do
+  code=$(curl -s -o /dev/null -w '%{http_code}' \
+    -H "Authorization: token $token" "https://api.github.com/repos/$repo")
+  if [ "$code" = "200" ]; then
+    echo "✓ Can read $repo"
+  else
+    echo "✗ Cannot read $repo (HTTP $code)" >&2
+    failed=1
+  fi
+done
+
+# GHCR bottle pull. Fatal: the formula sources are restricted, so a token that
+# cannot pull bottles almost certainly cannot build from source either.
+registry_token=$(curl -s -u "$username:$token" \
+  "https://ghcr.io/token?scope=repository:pointrlabs/internal:pull" \
+  | jq -r '.token // empty')
+if [ -z "$registry_token" ]; then
+  echo "✗ This token cannot authenticate to ghcr.io." >&2
+  failed=1
+else
+  # Use tags/list, not manifests/latest: bottles are versioned and there is no
+  # "latest" tag, so a manifest probe 404s even on a perfectly good token.
+  code=$(curl -s -o /dev/null -w '%{http_code}' \
+    -H "Authorization: Bearer $registry_token" \
+    "https://ghcr.io/v2/pointrlabs/internal/${GHCR_CANARY}/tags/list")
+  if [ "$code" = "200" ]; then
+    echo "✓ Can pull bottles from ghcr.io/pointrlabs/internal"
+  else
+    echo "✗ This token cannot download Pointr packages (HTTP $code)." >&2
+    failed=1
+  fi
+fi
+
+if [ "$failed" -ne 0 ]; then
+  echo >&2
+  echo "Setup failed: the token is valid but lacks the required access." >&2
+  echo "Ask your admin to grant this account read access to the pointrlabs" >&2
+  echo "Homebrew taps and to ghcr.io/pointrlabs/internal, then re-run setup." >&2
+  exit 1
+fi
+
+# --- Save credentials -------------------------------------------------------
+# key=value rather than "user:token" so a colon in either field cannot corrupt
+# parsing, and so troubleshooting metadata can be carried alongside.
+umask 077
+cat > "$CREDS_FILE" <<EOF
+user=$username
+token=$token
+setup_version=$SETUP_VERSION
+setup_host=$(hostname)
+setup_date=$(date -u +%Y-%m-%dT%H:%M:%SZ)
+EOF
+chmod 600 "$CREDS_FILE"
+echo "✓ Credentials saved to $CREDS_FILE"
+
+# --- Tap --------------------------------------------------------------------
+# Plain URLs, no embedded credentials: an in-remote token leaks via `brew info`
+# and lands in .git/config on every machine. Auth comes from the environment
+# that ptr-brew exports instead.
+tap_repo() {
+  local tap="$1" url="$2"
+  if brew tap | grep -qx "$tap"; then
+    # Rewrite any previously embedded credential out of the remote.
+    git -C "$(brew --repo "$tap")" remote set-url origin "$url" 2>/dev/null || true
+    echo "✓ $tap already tapped"
+  else
+    echo "Tapping $tap..."
+    brew tap "$tap" "$url" || { echo "Failed to tap $tap." >&2; exit 1; }
+  fi
+}
+
+export HOMEBREW_GITHUB_API_TOKEN="$token"
+export GIT_TERMINAL_PROMPT=0
+
+# The vendor tap is public: clone it with no credentials at all.
+tap_repo pointrlabs/vendor "https://github.com/pointrlabs/homebrew-vendor.git"
+
+# The internal tap is private and `brew update` re-fetches it non-interactively,
+# so the remote needs a credential that persists. This is the one place a token
+# is written to disk outside ~/.pointr-brew, and it means `brew info` on an
+# internal formula will print the token. Accepted deliberately: the distributed
+# account is read-only on this tap and its packages.
+tap_repo pointrlabs/internal "https://x-access-token:${token}@github.com/pointrlabs/homebrew-internal.git"
+
+# Trust both taps so short-name installs work on Homebrew 6.0+.
+# Fully-qualified installs auto-trust, but `ptr-brew install simulator10` does
+# not. `brew trust --tap` is idempotent and needs no pre-check.
+if brew trust --help &>/dev/null; then
+  brew trust --tap pointrlabs/vendor pointrlabs/internal &>/dev/null \
+    && echo "✓ Taps trusted"
+fi
+
+echo
+echo "Setup complete. Install packages with:"
+echo "  ptr-brew install simulator10"

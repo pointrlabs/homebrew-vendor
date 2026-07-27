@@ -5,6 +5,7 @@ Homebrew tap for Pointr-customized third-party packages.
 To install the formulae inside this tap you need to add it via:
 ```
 brew tap pointrlabs/vendor
+brew trust pointrlabs/vendor
 ```
 
 Afterwards you can install formulae like any other homebrew formula:
@@ -14,15 +15,49 @@ brew install [name of the package]
 
 For example:
 ```
-brew install maplibre-gl-native
-brew install maplibre-map-renderer
+brew install qmaplibre
 ```
 
 To upgrade a formula:
 ```
 brew update
-brew upgrade pointrlabs/vendor/maplibre-gl-native
+brew upgrade qmaplibre
 ```
+
+## Pointr Homebrew helpers (`ptr-brew`)
+
+This tap also hosts the helpers used to access the **private** `pointrlabs/internal`
+tap, since this repo is public and can be reached without credentials:
+
+| Path | Purpose |
+| --- | --- |
+| `bootstrap.sh` | Fetched via `curl` to install or upgrade the `ptr-brew` formula. Deliberately minimal — it is served from an unpinned branch, so logic belongs in `bin/`. |
+| `bin/ptr-setup` | Verifies a token, saves credentials to `~/.pointr-brew`, taps and trusts both taps. |
+| `bin/ptr-brew` | Wrapper around `brew` that authenticates before each command. |
+| `Formula/ptr-brew.rb` | Installs the two scripts into `$(brew --prefix)/bin`. |
+
+End users only run the bootstrap one-liner documented in the
+[homebrew-internal README](https://github.com/pointrlabs/homebrew-internal#setup).
+
+### Releasing a new version of the helpers
+
+The helpers are installed by a formula, so changes to `bin/` require a new tag:
+
+1. Merge the changes to `develop`.
+2. Tag the commit, e.g. `git tag version/ptr-brew/1.0.1`.
+3. Read the commit hash with `git rev-parse version/ptr-brew/1.0.1`.
+4. Update `tag:`, `revision:` and `version` in `Formula/ptr-brew.rb`, then commit and push.
+
+The formula-update commit lands *after* the tag, so the tagged tree does not
+contain the formula that references it. That is expected — Homebrew reads the
+formula from the tap checkout and only clones the tagged tree for `bin/`.
+
+Users pick up the new version by re-running the bootstrap one-liner, which
+upgrades in place. `bootstrap.sh` itself is served from `develop` and is **not**
+pinned, so edits to it reach new users immediately without a tag.
+
+There is no `bottle do` block — these are plain shell scripts with nothing to
+compile, so the `bottle` workflow does not apply to this formula.
 
 ## How to build and upload bottles
 There is a `bottle` workflow which you can trigger under "Actions". You need to type in the name of the formula to bottle. The workflow will create the bottles, upload to Packages and then automatically push the bottle definition to the formula in the specified branch.

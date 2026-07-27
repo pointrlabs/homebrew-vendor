@@ -1,0 +1,87 @@
+#!/bin/bash
+# Wrapper around `brew` that authenticates to the Pointr private taps first.
+#
+# Reads credentials from ~/.pointr-brew (written by ptr-setup), exports the
+# tokens Homebrew needs, then hands off to brew with the given arguments.
+#
+# Usage: ptr-brew install simulator10
+set -uo pipefail
+
+CREDS_FILE="$HOME/.pointr-brew"
+LEGACY_MARKER="# Pointr Homebrew helpers"
+
+if [ ! -f "$CREDS_FILE" ]; then
+  echo "Run 'ptr-setup' first to configure credentials." >&2
+  exit 1
+fi
+
+# Transitional check: the pre-formula installer defined ptr-brew as a shell
+# function in the user's rc file, which shadows this executable. If the block is
+# still present, the running shell may be using the stale function.
+# Remove once all users have migrated.
+if grep -qs "$LEGACY_MARKER" "$HOME/.zshrc" "$HOME/.bashrc" \
+     "$HOME/.bash_profile" "$HOME/.profile"; then
+  echo "Warning: the old ptr-brew shell function is still in your shell config." >&2
+  echo "  Re-run the bootstrap command to remove it." >&2
+fi
+
+# --- Read credentials -------------------------------------------------------
+# Current format is key=value. Fall back to the legacy "user:token" single line
+# so users who have not re-run ptr-setup are not broken by the format change.
+user=""
+token=""
+if grep -q '^token=' "$CREDS_FILE" 2>/dev/null; then
+  while IFS='=' read -r key value; do
+    case "$key" in
+      user)  user="$value" ;;
+      token) token="$value" ;;
+    esac
+  done < "$CREDS_FILE"
+else
+  legacy=$(head -n1 "$CREDS_FILE")
+  user="${legacy%%:*}"
+  token="${legacy#*:}"
+fi
+
+if [ -z "$token" ]; then
+  echo "Could not read a token from $CREDS_FILE." >&2
+  echo "Run 'ptr-setup' to reconfigure." >&2
+  exit 1
+fi
+
+# --- Validate ---------------------------------------------------------------
+http_code=$(curl -s -o /dev/null -w '%{http_code}' \
+  -H "Authorization: token $token" https://api.github.com/user)
+if [ "$http_code" != "200" ]; then
+  echo "Token is invalid or expired. Run 'ptr-setup' to reconfigure." >&2
+  exit 1
+fi
+
+# Homebrew on Linux can exhaust the default file descriptor limit.
+if [ "$(uname)" = "Linux" ]; then
+  ulimit -n 65536 2>/dev/null || true
+fi
+
+export HOMEBREW_GITHUB_API_TOKEN="$token"
+
+# --- GHCR registry token ----------------------------------------------------
+# Fatal, not a warning: formula sources are restricted, so an install that
+# cannot pull bottles cannot fall back to building from source either. Failing
+# here is clearer than a confusing git error minutes into `brew install`.
+registry_token=$(curl -s -u "$user:$token" \
+  "https://ghcr.io/token?scope=repository:pointrlabs/internal:pull" \
+  | jq -r '.token // empty')
+if [ -z "$registry_token" ]; then
+  echo "Error: cannot authenticate to ghcr.io." >&2
+  echo "  The token may have expired or had its access revoked." >&2
+  echo "  Run 'ptr-setup' to reconfigure." >&2
+  exit 1
+fi
+export HOMEBREW_DOCKER_REGISTRY_TOKEN="$registry_token"
+
+# Refresh formula definitions before any operation that installs.
+case "${1:-}" in
+  install|upgrade|reinstall) brew update ;;
+esac
+
+exec brew "$@"
