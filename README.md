@@ -41,12 +41,21 @@ End users only run the bootstrap one-liner documented in the
 
 ### Releasing a new version of the helpers
 
-The helpers are installed by a formula, so changes to `bin/` require a new tag:
+The helpers are installed by a formula, so changes to `bin/` require a new tag.
+The **tag is the only place the version is written**: Homebrew derives the
+version from `version/ptr-brew/<x.y.z>`, and `inreplace` stamps it into the
+scripts at install time (they ship with `PTR_BREW_VERSION="dev"`, which is what
+you see when running them straight from a checkout). Both commands print their
+version on startup, so shared logs always identify the build.
 
 1. Merge the changes to `develop`.
-2. Tag the commit, e.g. `git tag version/ptr-brew/1.0.1`.
-3. Read the commit hash with `git rev-parse version/ptr-brew/1.0.1`.
-4. Update `tag:`, `revision:` and `version` in `Formula/ptr-brew.rb`, then commit and push.
+2. Tag the commit, e.g. `git tag version/ptr-brew/1.0.3`.
+3. Read the commit hash with `git rev-parse version/ptr-brew/1.0.3`.
+4. Update `tag:` and `revision:` in `Formula/ptr-brew.rb`, then commit and push
+   both the branch and the tag.
+
+Anything in `bin/` must be committed *before* tagging — the tag is what supplies
+those files. Only the formula is edited afterwards.
 
 The formula-update commit lands *after* the tag, so the tagged tree does not
 contain the formula that references it. That is expected — Homebrew reads the
