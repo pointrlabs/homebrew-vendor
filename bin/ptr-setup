@@ -10,7 +10,7 @@
 set -uo pipefail
 
 CREDS_FILE="$HOME/.pointr-brew"
-SETUP_VERSION="1.0.0"
+SETUP_VERSION="1.0.1"
 
 # Canary package used to prove the token can pull bottles from GHCR. If this
 # formula is ever renamed, update it here or the check reports a false failure.
